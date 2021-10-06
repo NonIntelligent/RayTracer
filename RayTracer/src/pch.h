@@ -12,3 +12,4 @@
 /* C++ Standard headers */
 #include <vector>
 #include <iostream>
+#include <math.h>
