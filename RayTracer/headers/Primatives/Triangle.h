@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Primatives/Shape.h"
+#include "Primatives/Model.h"
 
-class triangle : public Shape {
+class triangle : public Model {
 private:
 	vec3 vertex0, vertex1, vertex2;
 	vec3 norm0, norm1, norm2;

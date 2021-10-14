@@ -117,14 +117,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>GLM_FORCE_MESSAGES;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(SolutionDir)libraries\SDL2-2.0.16\include;$(SolutionDir)libraries\glm;$(SolutionDir)libraries\glew-2.1.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)headers;$(SolutionDir)libraries\SDL2-2.0.16\include;$(SolutionDir)libraries\glm;$(SolutionDir)libraries\glew-2.1.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)libraries\SDL2-2.0.16\lib\x64;$(SolutionDir)libraries\glew-2.1.0\lib\Release\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)libraries\SDL2-2.0.16\lib\x64;$(SolutionDir)libraries\glew-2.1.0\lib\Release\x64;$(SolutionDir)libraries\Boost-1.77\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>SDL2.lib;SDL2main.lib;glew32s.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -161,7 +161,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>GLM_FORCE_MESSAGES;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(SolutionDir)libraries\SDL2-2.0.16\include;$(SolutionDir)libraries\glm;$(SolutionDir)libraries\glew-2.1.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)headers;$(SolutionDir)libraries\SDL2-2.0.16\include;$(SolutionDir)libraries\glm;$(SolutionDir)libraries\glew-2.1.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -170,40 +170,34 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)libraries\SDL2-2.0.16\lib\x64;$(SolutionDir)libraries\glew-2.1.0\lib\Release\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)libraries\SDL2-2.0.16\lib\x64;$(SolutionDir)libraries\glew-2.1.0\lib\Release\x64;$(SolutionDir)libraries\Boost-1.77\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>SDL2.lib;SDL2main.lib;glew32s.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\Primatives\Shape.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Primatives\Model.cpp" />
     <ClCompile Include="src\Primatives\Sphere.cpp" />
-    <ClCompile Include="src\pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      </PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      </PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeaderFile>
-    </ClCompile>
     <ClCompile Include="src\RayTracer.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\Primatives\Triangle.cpp" />
+    <ClCompile Include="src\Scene\Scene.cpp" />
+    <ClCompile Include="src\Scene\SceneSerialiser.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Primatives\Shape.h" />
-    <ClInclude Include="src\vendor\OBJloader.h" />
-    <ClInclude Include="src\pch.h" />
-    <ClInclude Include="src\Primatives\Sphere.h" />
-    <ClInclude Include="src\Primatives\Triangle.h" />
-    <ClInclude Include="src\vendor\Vertex.h" />
+    <ClInclude Include="headers\macros\Definitions.h" />
+    <ClInclude Include="headers\macros\Macro_chrono.h" />
+    <ClInclude Include="headers\Primatives\Model.h" />
+    <ClInclude Include="headers\RayTracer.h" />
+    <ClInclude Include="headers\Scene\Scene.h" />
+    <ClInclude Include="headers\Scene\SceneSerialiser.h" />
+    <ClInclude Include="headers\vendor\json.hpp" />
+    <ClInclude Include="headers\Primatives\Sphere.h" />
+    <ClInclude Include="headers\Primatives\Triangle.h" />
+    <ClInclude Include="headers\vendor\OBJloader.h" />
+    <ClInclude Include="headers\vendor\Vertex.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

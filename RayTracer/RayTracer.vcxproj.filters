@@ -18,36 +18,57 @@
     <ClCompile Include="src\RayTracer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\pch.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\Primatives\Sphere.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Primatives\Triangle.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Primatives\Shape.cpp">
+    <ClCompile Include="src\Primatives\Model.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Scene\Scene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Scene\SceneSerialiser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\pch.h">
+    <ClInclude Include="headers\Primatives\Sphere.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Primatives\Sphere.h">
+    <ClInclude Include="headers\Primatives\Triangle.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Primatives\Triangle.h">
+    <ClInclude Include="headers\Primatives\Model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\vendor\OBJloader.h">
+    <ClInclude Include="headers\Scene\Scene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\vendor\Vertex.h">
+    <ClInclude Include="headers\Scene\SceneSerialiser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Primatives\Shape.h">
+    <ClInclude Include="headers\RayTracer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\vendor\json.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\vendor\OBJloader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\vendor\Vertex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\macros\Definitions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\macros\Macro_chrono.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -16,6 +16,9 @@
 # Mono auto generated files
 mono_crash.*
 
+#image generation
+*.ppm
+
 # Build results
 *.exe
 intermediates/
