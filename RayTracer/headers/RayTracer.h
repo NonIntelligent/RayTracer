@@ -4,16 +4,13 @@
 #include "macros/Macro_chrono.h"
 #include "macros/Definitions.h"
 #include "Primatives/Sphere.h"
+#include "Scene/Scene.h"
 
 using namespace glm;
 
 class RayTracer {
-	int width = 640;
-	int height = 480;
-
 	SDL_Window* window = nullptr;
 	SDL_Surface* surface = nullptr;
-	SDL_Event SDLevent;
 
 	// update rate of 60hz
 	const nanoSeconds NS_PER_TICK = nanoSeconds(16667us);
@@ -21,11 +18,7 @@ class RayTracer {
 	volatile bool running = false;
 
 	// Temporary objects
-	vec3** image;
-	Sphere redsphere;
-	Sphere yellowsphere;
-	Sphere bluesphere;
-	Sphere greysphere;
+	Scene scene;
 
 	bool initSDL();
 
@@ -40,14 +33,18 @@ public:
 
 	void mainLoop();
 
-	bool intersectSphere(vec3 center, vec3 orig, vec3 dir, float radius, float& t);
-
 	Uint32 convertColour(vec3 colour);
 
-	void computeColourSphere(const vec3 sourcePt, const vec3 IntPt, const vec3 CenPt, const vec3 dir, float& ColValue);
+	void ComputeColourSphere(const vec3 sourcePt, const vec3 IntPt, const vec3 CenPt, const vec3 dir, float& ColValue);
 
-	// Applies colour to pixel on screen
+	// Sets the colour on the screenSurface
 	void putPixel32_nolock(int x, int y, Uint32 colour);
+
+	// FPS calculation guide
+	// https://www.youtube.com/watch?v=4cwpXJIHaMo
+	int caclulateFpsLows();
+
+	void renderModels(Scene &scene);
 
 	void shutDown();
 };

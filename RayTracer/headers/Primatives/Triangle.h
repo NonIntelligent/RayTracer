@@ -14,10 +14,12 @@ public:
 		vec3 colour) :
 		vertex0(v0), vertex1(v1), vertex2(v2), norm0(n0), norm1(n1), norm2(n2)
 	{
-		mcolour = colour;
+		mycolour = colour;
 	};
-
-	bool rayIntersect(vec3 rayDirection, vec3 rayOrigin, float& t, vec3& IntPt, vec3& normVec)override;
-	void ComputeColor(const float ambientIntensity, const vec3 IntPt, const vec3 lightPt, const vec3 rayDirection, const vec3 tNormvec, float& ColValue);
 	~triangle();
+
+	bool rayIntersect(vec3 rayOrigin, vec3 rayDirection, float& t)override;
+
+	void computeColour(Light* light, const vec3 viewDir, const vec3 intersectPt, vec3& result) override;
+
 };

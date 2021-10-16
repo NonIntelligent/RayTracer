@@ -1,18 +1,21 @@
 #pragma once
-#include "glm/vec3.hpp"
+#include "glm/glm.hpp"
+#include "Light.h"
+
 using namespace glm;
 
 class Model {
-private:
+protected:
 	vec3 center;
-	vec3 diffuseColour;
-	vec3 diffuseIntensity;
 
 public:
 	vec3 position;
-	vec3 mcolour;
+	vec3 mycolour;
+	float shininess = 0;
 
-	virtual bool rayIntersect(vec3 rayDirection, vec3 rayOrigin, float& t, vec3& IntPt, vec3& normVec) = 0;
-	virtual void computeColour() = 0;
+	virtual bool rayIntersect(vec3 rayOrigin, vec3 rayDirection, float& t) = 0;
+	virtual void computeColour(Light* light, const vec3 viewDir, const vec3 intersectPt, vec3& result) = 0;
+
+	void getSurfaceData(vec3 rayOrigin, vec3 rayDirection, float t, vec3& intersectPt, vec3& normVec);
 };
 

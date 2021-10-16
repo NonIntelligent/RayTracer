@@ -4,6 +4,7 @@
 #include <math.h>
 #include <vector>
 #include <iostream>
+#include <string>
 
 bool RayTracer::initSDL() {
 	if(SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -12,7 +13,7 @@ bool RayTracer::initSDL() {
 	}
 	else {
 		//create the window
-		window = SDL_CreateWindow("SDL Version", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN);
+		window = SDL_CreateWindow("SDL Version", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, scene.getWidth(), scene.getHeight(), SDL_WINDOW_SHOWN);
 		if(window == NULL) {
 			std::cout << "SDL Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
 			return false;
@@ -25,129 +26,43 @@ bool RayTracer::initSDL() {
 }
 
 bool RayTracer::init() {
+	scene.init();
+
+	scene.createSphere(vec3(0, 0, -20), vec3(1.00, 0.32, 0.36), 4);
+	scene.createSphere(vec3(5, -1, -15), vec3(0.9, 0.76, 0.46), 2);
+	scene.createSphere(vec3(5, 0, -25), vec3(0.65, 0.77, 0.97), 3);
+	scene.createSphere(vec3(-5.5, 0, -15), vec3(0.90, 0.90, 0.90), 3);
+
 	return initSDL();
 }
 
 void RayTracer::handleInputs() {
+	SDL_Event SDLevent;
 	while(SDL_PollEvent(&SDLevent) != 0) {
-		if(SDLevent.type == SDL_QUIT) {
+		switch(SDLevent.type) {
+		case SDL_QUIT:
 			running = false;
+			break;
+		case SDL_KEYUP:
+			if(SDLevent.key.keysym.sym == SDLK_SPACE) {
+				scene.generateImage();
+			}
+			break;
+
+		default:
+			break;
 		}
+
 	}
 }
 
 void RayTracer::update() {
-	redsphere = Sphere(4, vec3(0, 0, -20), vec3(1.00, 0.32, 0.36));
-	yellowsphere = Sphere(2, vec3(5, -1, -15), vec3(0.9, 0.76, 0.46));
-	bluesphere = Sphere(3, vec3(5, 0, -25), vec3(0.65, 0.77, 0.97));
-	greysphere = Sphere(3, vec3(-5.5, 0, -15), vec3(0.90, 0.90, 0.90));
-	float PixelNdx, PixelNdy, PixelRdx, PixelRdy, Iar, tanvalue, PCameraX, PCameraY;
-
-	//create two dimensional pixel array for the image
-	image = new vec3 * [width];
-	for(int i = 0; i < width; i++) image[i] = new vec3[height];
-
-	Iar = width / (float)height;
-	tanvalue = tanf(15.0 * PI / 180.0);  //40 degree for big field of view //15 for zoom in
-
-	bool Intersection;
-	float t, min_t, ColorVal;
-	int i, whichone;
-	vec3 ttvec, dir, org, mat_color, final_Color, IntPt;
-	std::vector<float> t_arr;
-	std::vector<vec3> color_arr;
-
-
-	///light setting
-	vec3 sourcePt;
-	sourcePt.x = 0.0; sourcePt.y = 20.0; sourcePt.z = 0.0;
-
-	for(int y = 0; y < height; ++y) {
-		for(int x = 0; x < width; ++x) {
-			t_arr.clear();
-			color_arr.clear();
-
-			PixelNdx = (x + 0.5) / (float)width;
-			PixelNdy = (y + 0.5) / (float)height;
-			PixelRdx = 2 * PixelNdx - 1.0;
-			PixelRdy = 1.0 - 2 * PixelNdy;
-			PixelRdx = PixelRdx * Iar;
-
-			PCameraX = PixelRdx * tanvalue;
-			PCameraY = PixelRdy * tanvalue;
-
-			ttvec.x = PCameraX;
-			ttvec.y = PCameraY;
-			ttvec.z = -1.0;
-			//dir need to be normalized
-			dir = normalize(ttvec);
-
-			org.x = 0.0; org.y = 0.0; org.z = 0.0;
-
-			Intersection = intersectSphere(redsphere.getCenter(), org, dir, redsphere.getRadius(), t);
-			if(Intersection) {
-				t_arr.push_back(t);
-				color_arr.push_back(redsphere.getMyColor());
-			}
-
-			Intersection = intersectSphere(yellowsphere.getCenter(), org, dir, yellowsphere.getRadius(), t);
-			if(Intersection) {
-				t_arr.push_back(t);
-				color_arr.push_back(yellowsphere.getMyColor());
-			}
-
-			Intersection = intersectSphere(bluesphere.getCenter(), org, dir, bluesphere.getRadius(), t);
-			if(Intersection) {
-				t_arr.push_back(t);
-				color_arr.push_back(bluesphere.getMyColor());
-			}
-
-			Intersection = intersectSphere(greysphere.getCenter(), org, dir, greysphere.getRadius(), t);
-			if(Intersection) {
-				t_arr.push_back(t);
-				color_arr.push_back(greysphere.getMyColor());
-			}
-
-			if(t_arr.size() == 0) {
-				image[x][y].x = 1.0;
-				image[x][y].y = 1.0;
-				image[x][y].z = 1.0;
-
-				putPixel32_nolock(x, y, convertColour(image[x][y]));
-			}
-			else {
-				min_t = 1000.0;
-				whichone = 0;
-				for(i = 0; i < t_arr.size(); i++) {
-					if(t_arr[i] < min_t) {
-						whichone = i; min_t = t_arr[i];
-					}
-				}
-				image[x][y].x = color_arr[whichone].x;
-				image[x][y].y = color_arr[whichone].y;
-				image[x][y].z = color_arr[whichone].z;
-
-				putPixel32_nolock(x, y, convertColour(image[x][y]));
-			}
-		}
-	}
-
-	std::ofstream ofs("./test.ppm", std::ios::out | std::ios::binary);
-	ofs << "P6\n" << width << " " << height << "\n255\n";
-
-	for(int y = 0; y < height; ++y) {
-		for(int x = 0; x < width; ++x) {
-			ofs << (unsigned char)(std::min((float)1, (float)image[x][y].x) * 255) <<
-				(unsigned char)(std::min((float)1, (float)image[x][y].y) * 255) <<
-				(unsigned char)(std::min((float)1, (float)image[x][y].z) * 255);
-		}
-	}
-	ofs.close();
 
 }
 
 void RayTracer::render(double dt) {
-	//delete(image);
+	renderModels(scene);
+
 	SDL_UpdateWindowSurface(window);
 }
 
@@ -169,8 +84,6 @@ void RayTracer::mainLoop() {
 	frameTimer = currentTime.time_since_epoch();
 	timer = currentTime.time_since_epoch();
 
-	bool doOnce = true;
-
 	// Loop starts here
 	while(running) {
 		// How much time has passed since the last frame
@@ -187,10 +100,7 @@ void RayTracer::mainLoop() {
 		
 		// Do multiple physics ticks when behind
 		while(physicsTimer >= NS_PER_TICK) {
-			if(doOnce) {
-				update();
-				doOnce = false;
-			}
+			update();
 			ticks++;
 			physicsTimer -= NS_PER_TICK;
 		}
@@ -217,31 +127,6 @@ void RayTracer::mainLoop() {
 	}
 }
 
-bool RayTracer::intersectSphere(vec3 center, vec3 orig, vec3 dir, float radius, float& t) {
-	float t0, t1; // solutions for t if the ray intersects 
-
-// geometric solution  // vector dir has to be normalize, length is 1.0
-	vec3 L = center - orig;
-	float tca = dot(L, dir);
-	if(tca < 0) return false;
-	float d = dot(L, L) - tca * tca;
-	if(d > (radius * radius)) return false;
-
-	float thc = sqrt(radius * radius - d);
-	t0 = tca - thc;
-	t1 = tca + thc;
-
-	if(t0 > t1) std::swap(t0, t1);
-
-	if(t0 < 0) {
-		t0 = t1; // if t0 is negative, let's use t1 instead 
-		if(t0 < 0) return false; // both t0 and t1 are negative 
-	}
-
-	t = t0;
-	return true;
-}
-
 Uint32 RayTracer::convertColour(vec3 colour) {
 	int tt;
 	Uint8 r, g, b;
@@ -265,7 +150,7 @@ Uint32 RayTracer::convertColour(vec3 colour) {
 	return rgb;
 }
 
-void RayTracer::computeColourSphere(const vec3 sourcePt, const vec3 IntPt, const vec3 CenPt, const vec3 dir, float& ColValue) {
+void RayTracer::ComputeColourSphere(const vec3 sourcePt, const vec3 IntPt, const vec3 CenPt, const vec3 dir, float& ColValue) {
 	vec3 lightToPt, surNorm, rVec, ttvec;
 	float Ca, Cd, Cs, tt; //Ca for ambient colour; //Cd for diffuse colour; //Cs for specular highlights
 	float vecdot;
@@ -296,8 +181,127 @@ void RayTracer::putPixel32_nolock(int x, int y, Uint32 colour) {
 	*((Uint32*)pixel) = colour;
 }
 
+int RayTracer::caclulateFpsLows() {
+	static const int NUM_SAMPLES = 1000;
+	static int last_1000_frames[NUM_SAMPLES];
+	return 10;
+}
+
+void RayTracer::renderModels(Scene &scene) {
+	std::vector<Model*> models = scene.getModels();
+	std::vector<Light*> lights = scene.getLights();
+	vec3** image = scene.getPixels();
+
+	const int width = scene.getWidth();
+	const int height = scene.getHeight();
+
+	float PixelNdx, PixelNdy, PixelRdx, PixelRdy, aspectRatio, tanvalue, PCameraX, PCameraY;
+
+	aspectRatio = width / height;
+	tanvalue = tanf(40.0 * PI / 180.0);  //40 degree for big field of view //15 for zoom in
+
+	bool Intersection;
+	float t, min_t, ColorVal;
+
+	// Used for iteration and array access to improve performance
+	int i, whichone;
+
+	vec3 ttvec, dir, org, mat_color, final_Color, IntPt;
+	// Initialise with set size to avoid resizing (Only effective when there are multiple objects in scene)
+	std::vector<float> t_arr(8);
+	std::vector<Model*> inView(8);
+
+
+	///light setting
+	vec3 sourcePt;
+	sourcePt.x = 3.0; sourcePt.y = 5.0; sourcePt.z = -5.0;
+
+	for(int y = 0; y < height; ++y) {
+		for(int x = 0; x < width; ++x) {
+			t_arr.clear();
+			inView.clear();
+
+			// Calculate direction from camera to pixel
+			PixelNdx = (x + 0.5) / (float)width;
+			PixelNdy = (y + 0.5) / (float)height;
+			PixelRdx = 2 * PixelNdx - 1.0;
+			PixelRdy = 1.0 - 2 * PixelNdy;
+			PixelRdx = PixelRdx * aspectRatio;
+
+			PCameraX = PixelRdx * tanvalue;
+			PCameraY = PixelRdy * tanvalue;
+
+			ttvec.x = PCameraX;
+			ttvec.y = PCameraY;
+			ttvec.z = -1.0;
+
+			//dir need to be normalized
+			dir = normalize(ttvec);
+
+			// Camera origin
+			org = vec3(0.f);
+
+			vec3 intersectPt, normalVec;
+			vec3 lightNorm;
+
+			auto it = models.begin();
+
+			while(it != models.end()) {
+				Model* ptr = *it;
+
+				// If the camera intersects with the model
+				if(ptr->rayIntersect(org, dir, t)) {
+					t_arr.push_back(t);
+					inView.push_back(ptr);
+				}
+
+				it++;
+			}
+
+			// Nothing on screen so render a blank image
+			if(t_arr.size() == 0) {
+				image[x][y].x = 1.0;
+				image[x][y].y = 1.0;
+				image[x][y].z = 1.0;
+
+				putPixel32_nolock(x, y, convertColour(image[x][y]));
+			}
+			else {
+				min_t = 1000.0;
+				whichone = 0;
+				// Find the model closest to the Ray origin (Camera origin)
+				for(i = 0; i < t_arr.size(); i++) {
+					if(t_arr[i] < min_t) {
+						whichone = i; min_t = t_arr[i];
+					}
+				}
+
+				// Get the intersection point and surface normal of the model
+				inView[whichone]->getSurfaceData(org, dir, t_arr[whichone], intersectPt, normalVec);
+
+				// Compute the colour at the pixel caused by all light objects
+				vec3 pixelColour;
+				vec3 accumulator(0);
+				auto it = lights.begin();
+
+				while(it != lights.end()) {
+					inView[whichone]->computeColour(*it, (*it)->direction, intersectPt, pixelColour);
+					accumulator += pixelColour;
+					it++;
+				}
+
+				image[x][y] = accumulator;
+
+				// Overflow the colours onto the image pixels
+				putPixel32_nolock(x, y, convertColour(image[x][y]));
+			}
+		}
+	}
+}
+
 void RayTracer::shutDown() {
-	delete(image);
+	scene.deleteAllObjects();
+	scene.deleteResources();
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 }

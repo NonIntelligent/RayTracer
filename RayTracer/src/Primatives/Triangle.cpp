@@ -4,14 +4,14 @@ triangle::triangle(vec3 pos, vec3 v0, vec3 v1, vec3 v2, vec3 color) {
 
 }
 
-bool triangle::rayIntersect(vec3 rayDirection, vec3 rayOrigin, float& t, vec3& IntPt, vec3& normVec) {
+triangle::~triangle() {
+
+}
+
+bool triangle::rayIntersect(vec3 rayOrigin, vec3 rayDirection, float& t) {
 	return true;
 }
 
-void triangle::ComputeColor(const float ambientIntensity, const vec3 IntPt, const vec3 lightPt, const vec3 rayDirection, const vec3 tNormvec, float& ColValue) {
-
-}
-
-triangle::~triangle() {
-
+void triangle::computeColour(Light* light, const vec3 viewDir, const vec3 intersectPt, vec3& result) {
+	
 }
