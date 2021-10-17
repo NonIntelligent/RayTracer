@@ -39,6 +39,9 @@
     <ClCompile Include="src\Primatives\Light.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Primatives\Plane.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="headers\Primatives\Sphere.h">
@@ -56,13 +59,10 @@
     <ClInclude Include="headers\RayTracer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="headers\vendor\json.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="headers\vendor\OBJloader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="headers\vendor\Vertex.h">
+    <ClInclude Include="headers\Vertex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="headers\macros\Definitions.h">
@@ -77,5 +77,15 @@
     <ClInclude Include="headers\Primatives\Light.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="headers\Primatives\Plane.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\vendor\OBJ_Loader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="resources\cube_simple.obj" />
+    <Object Include="resources\teapot_simple.obj" />
   </ItemGroup>
 </Project>

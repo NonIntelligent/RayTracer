@@ -15,6 +15,7 @@
 
 //MINE LIBS
 #include "Vertex.h"
+#include "GL/glew.h"
 
 static std::vector<VertexWithAll> loadOBJ(const char* file_name)
 {
@@ -139,7 +140,6 @@ static std::vector<VertexWithAll> loadOBJ(const char* file_name)
 	//loading in all indices
 	for (size_t i = 0; i < vertices.size(); i++)
 	{
-
 		vertices[i].position = vertex_positions[vertex_position_indicies[i] - 1];
 		vertices[i].textcoord = vertex_textcoords[vertex_textcoord_indicies[i] - 1];
 		vertices[i].normal = vertex_normals[vertex_normal_indicies[i] - 1];

@@ -1,4 +1,5 @@
 #include "RayTracer.h"
+#include "Primatives/Triangle.h"
 #include <algorithm>
 #include <fstream>
 #include <math.h>
@@ -25,6 +26,13 @@ bool RayTracer::initSDL() {
 	}
 }
 
+RayTracer::RayTracer() {
+	cameraPos = vec3(0.f, 0.f, 0.f);
+	lookAtDir = vec3(0.f, 0.f, -1.f);
+	g_fov = 40.f;
+	threads.reserve(threadCount);
+}
+
 bool RayTracer::init() {
 	scene.init();
 
@@ -33,22 +41,65 @@ bool RayTracer::init() {
 	scene.createSphere(vec3(5, 0, -25), vec3(0.65, 0.77, 0.97), 3);
 	scene.createSphere(vec3(-5.5, 0, -15), vec3(0.90, 0.90, 0.90), 3);
 
+	scene.createPlane(vec3(0, -3, 0), vec3(0, 0.7132, 1.0), vec3(0, 1, 0));
+
+	// Create triangle with vertices, normals then colour
+	scene.createTriangle(vec3(0, 3, -8), vec3(-1.9, 1, -8), vec3(1.6, 1.5, -8), 
+						vec3(0, 0.6, 1.0), vec3(-0.4, -0.4, 1.0), vec3(0.4, -0.4, 1), 
+						vec3(0.5, 0.5, 0.0), 100);
+
+	scene.createMesh(vec3(-2, -1, -13), vec3(1), vec3(0.5, 0.5, 0), 64, "resources/cube_simple.obj");
+
+	//scene.createMesh(vec3(0, -1, -8), vec3(1), vec3(0.5, 0.5, 0), 100, "resources/teapot_simple.obj");
+
 	return initSDL();
 }
+
+// used for camera movement
+vec3 movementDir = vec3(0);
+float deltaX = 0, deltaY = 0;
 
 void RayTracer::handleInputs() {
 	SDL_Event SDLevent;
 	while(SDL_PollEvent(&SDLevent) != 0) {
+		int keyCode = SDLevent.key.keysym.sym;
 		switch(SDLevent.type) {
 		case SDL_QUIT:
 			running = false;
 			break;
+		case SDL_KEYDOWN:
+			movementDir.x = keyCode == SDLK_a ? -1 : keyCode == SDLK_d ? 1 : movementDir.x;
+			movementDir.y = keyCode == SDLK_LCTRL ? -1 : keyCode == SDLK_SPACE ? 1 : movementDir.y;
+			movementDir.z = keyCode == SDLK_w ? -1 : keyCode == SDLK_s ? 1 : movementDir.z;
+			break;
+
 		case SDL_KEYUP:
-			if(SDLevent.key.keysym.sym == SDLK_SPACE) {
+			if(keyCode == SDLK_ESCAPE) {
+				running = false;
+				break;
+			}
+			if(keyCode == SDLK_g) {
 				scene.generateImage();
+			}
+			if(keyCode == SDLK_a || keyCode == SDLK_d) {
+				movementDir.x = 0;
+			}
+			if(keyCode == SDLK_LCTRL || keyCode == SDLK_SPACE) {
+				movementDir.y = 0;
+			}
+			if(keyCode == SDLK_w || keyCode == SDLK_s) {
+				movementDir.z = 0;
 			}
 			break;
 
+		case SDL_MOUSEWHEEL:
+			if(SDLevent.wheel.y > 0) {
+				g_fov-= 2;
+			}
+			else if(SDLevent.wheel.y < 0) {
+				g_fov+= 2;
+			}
+			break;
 		default:
 			break;
 		}
@@ -57,13 +108,24 @@ void RayTracer::handleInputs() {
 }
 
 void RayTracer::update() {
-
+	updateCameraPosition(deltaX, deltaY);
 }
 
 void RayTracer::render(double dt) {
-	renderModels(scene);
+	const int height = scene.getHeight();
+	const int width = scene.getWidth();
+	for(int i = 0; i < threadCount; i++) {
+		threads.push_back(std::thread(&RayTracer::renderModels, this, std::ref(scene), i * height / threadCount, (i + 1) * height / threadCount));
+	}
 
 	SDL_UpdateWindowSurface(window);
+
+	for(int i = 0; i < threadCount; i++) {
+		threads[i].join();
+	}
+
+	threads.clear();
+
 }
 
 void RayTracer::mainLoop() {
@@ -127,6 +189,39 @@ void RayTracer::mainLoop() {
 	}
 }
 
+void RayTracer::updateCameraPosition(float deltaX, float deltaY) {
+	cameraPos.x += movementDir.x * cameraSpeed * 0.0167f;
+	cameraPos.y += movementDir.y * cameraSpeed * 0.0167f;
+	cameraPos.z += movementDir.z * cameraSpeed * 0.0167f;
+}
+
+glm::vec3 RayTracer::constructRayDir(Scene& scene, int x, int y) {
+	float PixelNdx, PixelNdy, PixelRdx, PixelRdy, aspectRatio, tanvalue, PCameraX, PCameraY;
+
+	aspectRatio = scene.getWidth() / scene.getHeight();
+	tanvalue = tanf(g_fov * PI / 180.0);  //40 degree for big field of view //15 for zoom in
+
+	// Calculate direction from camera to pixel
+	// pixel represented as a % along the screen
+	PixelNdx = (x + 0.5f) / (float)scene.getWidth();
+	PixelNdy = (y + 0.5f) / (float)scene.getHeight();
+
+	// Convert to world space between (-1, 1)
+	PixelRdx = 2 * PixelNdx - 1.0;
+	PixelRdy = 1.f - 2 * PixelNdy;
+	// Stretch width to match aspect ratio
+	PixelRdx = PixelRdx * aspectRatio;
+
+	// Multiply by fov result
+	PCameraX = PixelRdx * tanvalue;
+	PCameraY = PixelRdy * tanvalue;
+
+	vec3 ttvec = vec3(PCameraX, PCameraY, -1.f);
+
+	//dir need to be normalized
+	return normalize(ttvec);
+}
+
 Uint32 RayTracer::convertColour(vec3 colour) {
 	int tt;
 	Uint8 r, g, b;
@@ -150,29 +245,6 @@ Uint32 RayTracer::convertColour(vec3 colour) {
 	return rgb;
 }
 
-void RayTracer::ComputeColourSphere(const vec3 sourcePt, const vec3 IntPt, const vec3 CenPt, const vec3 dir, float& ColValue) {
-	vec3 lightToPt, surNorm, rVec, ttvec;
-	float Ca, Cd, Cs, tt; //Ca for ambient colour; //Cd for diffuse colour; //Cs for specular highlights
-	float vecdot;
-	lightToPt = normalize(sourcePt - IntPt);
-	surNorm = normalize(IntPt - CenPt);
-	Cd = std::max(0.0, (double)dot(lightToPt, surNorm));
-	Ca = 0.2;
-
-	//compute specular value
-	vecdot = dot(surNorm, lightToPt);
-	ttvec.x = surNorm.x * 2.0 * vecdot;
-	ttvec.y = surNorm.y * 2.0 * vecdot;
-	ttvec.z = surNorm.z * 2.0 * vecdot;
-
-	rVec = ttvec - lightToPt;
-	tt = std::max(0.0, (double)dot(rVec, -dir));
-	Cs = pow(tt, 20) * 0.7;
-
-	//ColValue = Cs;
-	ColValue = Ca + Cd + Cs;
-}
-
 void RayTracer::putPixel32_nolock(int x, int y, Uint32 colour) {
 	Uint8* pixel = (Uint8*)surface->pixels;
 
@@ -187,7 +259,7 @@ int RayTracer::caclulateFpsLows() {
 	return 10;
 }
 
-void RayTracer::renderModels(Scene &scene) {
+void RayTracer::renderModels(Scene &scene, int start, int end) {
 	std::vector<Model*> models = scene.getModels();
 	std::vector<Light*> lights = scene.getLights();
 	vec3** image = scene.getPixels();
@@ -195,51 +267,28 @@ void RayTracer::renderModels(Scene &scene) {
 	const int width = scene.getWidth();
 	const int height = scene.getHeight();
 
-	float PixelNdx, PixelNdy, PixelRdx, PixelRdy, aspectRatio, tanvalue, PCameraX, PCameraY;
-
-	aspectRatio = width / height;
-	tanvalue = tanf(40.0 * PI / 180.0);  //40 degree for big field of view //15 for zoom in
-
 	bool Intersection;
-	float t, min_t, ColorVal;
+	float t, min_t, u = 2.f, v = 2.f, ColorVal;
 
 	// Used for iteration and array access to improve performance
 	int i, whichone;
 
-	vec3 ttvec, dir, org, mat_color, final_Color, IntPt;
+	vec3 dir, org, mat_color, final_Color, IntPt;
 	// Initialise with set size to avoid resizing (Only effective when there are multiple objects in scene)
-	std::vector<float> t_arr(8);
-	std::vector<Model*> inView(8);
+	const int RESERVE_SIZE = 8;
 
+	std::vector<float> t_arr(RESERVE_SIZE);
+	std::vector<Model*> inView(RESERVE_SIZE);
 
-	///light setting
-	vec3 sourcePt;
-	sourcePt.x = 3.0; sourcePt.y = 5.0; sourcePt.z = -5.0;
-
-	for(int y = 0; y < height; ++y) {
+	// TODO swap order to optimise array memory access
+	for(int y = start; y < end; ++y) {
 		for(int x = 0; x < width; ++x) {
 			t_arr.clear();
 			inView.clear();
 
-			// Calculate direction from camera to pixel
-			PixelNdx = (x + 0.5) / (float)width;
-			PixelNdy = (y + 0.5) / (float)height;
-			PixelRdx = 2 * PixelNdx - 1.0;
-			PixelRdy = 1.0 - 2 * PixelNdy;
-			PixelRdx = PixelRdx * aspectRatio;
+			dir = constructRayDir(scene, x, y);
 
-			PCameraX = PixelRdx * tanvalue;
-			PCameraY = PixelRdy * tanvalue;
-
-			ttvec.x = PCameraX;
-			ttvec.y = PCameraY;
-			ttvec.z = -1.0;
-
-			//dir need to be normalized
-			dir = normalize(ttvec);
-
-			// Camera origin
-			org = vec3(0.f);
+			org = cameraPos;
 
 			vec3 intersectPt, normalVec;
 			vec3 lightNorm;
@@ -285,7 +334,7 @@ void RayTracer::renderModels(Scene &scene) {
 				auto it = lights.begin();
 
 				while(it != lights.end()) {
-					inView[whichone]->computeColour(*it, (*it)->direction, intersectPt, pixelColour);
+					inView[whichone]->computeColour(*it, dir, intersectPt, pixelColour);
 					accumulator += pixelColour;
 					it++;
 				}

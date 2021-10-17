@@ -2,7 +2,7 @@
 
 Light::Light(LightType type) : lightType(type){
 	if(type == LightType::DIRECTIONAL) {
-		ambientStrength = vec3(0.2);
+		ambientStrength = vec3(0.1);
 		diffuseStrength = vec3(0.5);
 		specularStrength = vec3(0.7);
 	}

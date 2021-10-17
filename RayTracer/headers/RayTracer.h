@@ -1,6 +1,7 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <SDL/SDL.h>
+#include <thread>
 #include "macros/Macro_chrono.h"
 #include "macros/Definitions.h"
 #include "Primatives/Sphere.h"
@@ -16,14 +17,22 @@ class RayTracer {
 	const nanoSeconds NS_PER_TICK = nanoSeconds(16667us);
 	long targetFps = 8000;
 	volatile bool running = false;
+	const int threadCount = 32;
+	std::vector<std::thread> threads;
 
 	// Temporary objects
 	Scene scene;
 
+	// Camera options
+	vec3 cameraPos;
+	vec3 lookAtDir;
+	float horizontalAngle, verticalAngle, g_fov;
+	const float cameraSpeed = 2.f;
+
 	bool initSDL();
 
 public:
-	RayTracer() { };
+	RayTracer();
 	~RayTracer() { };
 	bool init();
 
@@ -33,9 +42,11 @@ public:
 
 	void mainLoop();
 
-	Uint32 convertColour(vec3 colour);
+	void updateCameraPosition(float deltaX, float deltaY);
 
-	void ComputeColourSphere(const vec3 sourcePt, const vec3 IntPt, const vec3 CenPt, const vec3 dir, float& ColValue);
+	vec3 constructRayDir(Scene& scene, int x, int y);
+
+	Uint32 convertColour(vec3 colour);
 
 	// Sets the colour on the screenSurface
 	void putPixel32_nolock(int x, int y, Uint32 colour);
@@ -44,7 +55,7 @@ public:
 	// https://www.youtube.com/watch?v=4cwpXJIHaMo
 	int caclulateFpsLows();
 
-	void renderModels(Scene &scene);
+	void renderModels(Scene &scene, int start, int end);
 
 	void shutDown();
 };

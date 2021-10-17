@@ -1,6 +1,15 @@
 #include "Scene/Scene.h"
+#include "Primatives/Sphere.h"
+#include "Primatives/Triangle.h"
+#include "Primatives/Plane.h"
+#include "vendor/OBJ_Loader.h"
+
 #include <string>
 #include <fstream>
+
+vec3 convert(objl::Vector3 vector) {
+	return vec3(vector.X, vector.Y, vector.Z);
+}
 
 Scene::Scene() {
 
@@ -11,7 +20,7 @@ Scene::~Scene() {
 }
 
 void Scene::setupLights() {
-	createLight(vec3(3.0, 3.0, -10.0), vec3(0.957, 1.000, 0.980), vec3(0.0, 0.0, -1.0), LightType::DIRECTIONAL);
+	createLight(vec3(5.0, 8.0, 1.0), vec3(1), vec3(-0.3, -0.3, -1.0), LightType::DIRECTIONAL);
 }
 
 void Scene::createRenderImage() {
@@ -30,12 +39,42 @@ void Scene::createSphere(vec3 position, vec3 colour, float radius) {
 	models.push_back(sphere);
 }
 
-void Scene::createTriangle(vec3 position, vec3 colour) {
-
+void Scene::createTriangle(vec3 v0, vec3 v1, vec3 v2, vec3 colour) {
+	Model* triangle = (Model*) new Triangle(v0, v1, v2, colour);
+	models.push_back(triangle);
 }
 
-void Scene::createModel(vec3 position) {
+void Scene::createTriangle(vec3 v0, vec3 v1, vec3 v2, vec3 n0, vec3 n1, vec3 n2, vec3 colour, float shininess) {
+	Model* triangle = (Model*) new Triangle(v0, v1, v2, n0, n1, n2, colour, shininess);
+	models.push_back(triangle);
+}
 
+void Scene::createPlane(vec3 position, vec3 colour, vec3 normal) {
+	Model* plane = (Model*) new Plane(position, colour, normal);
+	models.push_back(plane);
+}
+
+void Scene::createMesh(vec3 position, vec3 scale, vec3 colour, float shininess, const char* filepath) {
+	objl::Loader loader;
+	loader.LoadFile(filepath);
+
+	int numVertices = loader.LoadedVertices.size();
+	auto mesh = loader.LoadedVertices;
+
+	for(int i = 0; i < numVertices; i += 3) {
+
+		vec3 v0 = convert(mesh[i].Position) * scale + position;
+		vec3 v1 = convert(mesh[i + 1].Position) * scale + position;
+		vec3 v2 = convert(mesh[i + 2].Position) * scale + position;
+
+		vec3 n0 = convert(mesh[i].Normal);
+		vec3 n1 = convert(mesh[i + 1].Normal);
+		vec3 n2 = convert(mesh[i + 2].Normal);
+
+		Model* tri = (Model*) new Triangle(v0, v1, v2, n0, n1, n2, colour, shininess);
+		
+		models.push_back(tri);
+	}
 }
 
 void Scene::createLight(vec3 position, vec3 colour, vec3 direction, LightType type) {

@@ -1,6 +1,5 @@
 #pragma once
-#include "Primatives/Sphere.h"
-#include "Primatives/Triangle.h"
+#include "Primatives/Model.h"
 #include "Primatives/Light.h"
 
 #include <glm/glm.hpp>
@@ -10,7 +9,6 @@
 class Scene {
 	std::vector<Model*> models;
 	std::vector<Light*> lights;
-	// textures list?
 	std::vector<std::string> objectFilePaths;
 
 	int width = 640;
@@ -29,8 +27,10 @@ public:
 	void init();
 
 	void createSphere(vec3 position, vec3 colour, float radius);
-	void createTriangle(vec3 position, vec3 colour);
-	void createModel(vec3 position);
+	void createTriangle(vec3 v0, vec3 v1, vec3 v2, vec3 colour);
+	void createTriangle(vec3 v0, vec3 v1, vec3 v2, vec3 n0, vec3 n1, vec3 n2, vec3 colour, float shininess);
+	void createPlane(vec3 position, vec3 colour, vec3 normal);
+	void createMesh(vec3 position, vec3 scale, vec3 colour, float shininess, const char* filepath);
 	void createLight(vec3 position, vec3 colour, vec3 direction, LightType type);
 
 	void generateImage();
