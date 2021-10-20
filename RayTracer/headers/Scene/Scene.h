@@ -44,8 +44,8 @@ public:
 
 	std::vector<Model*> getModels();
 	std::vector<Light*> getLights();
-	const int getWidth();
-	const int getHeight();
+	int getWidth() const;
+	int getHeight() const;
 
 	// Returns the array of pixel for the scene to be modified
 	vec3** getPixels();

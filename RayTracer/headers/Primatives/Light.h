@@ -21,7 +21,7 @@ public:
 	vec3 position = vec3(0.0);
 	vec3 direction = vec3(0.0, 0.0, -1.0);
 	vec3 colour = vec3(0.957, 1.000, 0.980); // White sunlight value
-
+	float radius = 4.f;
 	// Used for point/spot light intensity calculation (how fast it will dim)
 	float constant = 0.f, linear = 0.f, quadratic = 0.f;
 

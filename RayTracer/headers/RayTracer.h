@@ -24,6 +24,10 @@ class RayTracer {
 	// Temporary objects
 	Scene scene;
 
+	// Buffers for shadow calculations
+	float** occluderBuffer = nullptr;
+	float** densityBuffer = nullptr;
+
 	// Camera options
 	vec3 cameraPos;
 	vec3 lookAtDir;
@@ -58,7 +62,11 @@ public:
 
 	void renderModels(Scene &scene, int start, int end);
 	bool traceShadows(const Light* light, const IntersectData& originData, IntersectData& shadowData, const std::vector<Model*> models);
+	void renderSoftShadows(Scene& scene, int start, int end, int samplingSize);
+	
 	void traceReflections();
+
+	float searchCrossPattern(float** buffer, int x, int y, int limitX, int limitY, int samplingSize);
 
 	void shutDown();
 };

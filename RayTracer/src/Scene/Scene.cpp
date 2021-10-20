@@ -142,11 +142,11 @@ std::vector<Light*> Scene::getLights() {
 	return lights;
 }
 
-const int Scene::getWidth() {
+int Scene::getWidth() const{
 	return width;
 }
 
-const int Scene::getHeight() {
+int Scene::getHeight() const{
 	return height;
 }
 

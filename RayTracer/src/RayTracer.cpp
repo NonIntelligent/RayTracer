@@ -37,12 +37,18 @@ RayTracer::RayTracer() {
 bool RayTracer::init() {
 	scene.init();
 
+	occluderBuffer = new float* [scene.getWidth()];
+	for(int i = 0; i < scene.getWidth(); i++) occluderBuffer[i] = new float[scene.getHeight()];
+
+	densityBuffer = new float* [scene.getWidth()];
+	for(int i = 0; i < scene.getWidth(); i++) densityBuffer[i] = new float[scene.getHeight()];
+
+	scene.createPlane(vec3(0, -3, 0), vec3(0, 0.7132, 1.0), vec3(0, 1, 0));
+
 	scene.createSphere(vec3(0, 0, -20), vec3(1.00, 0.32, 0.36), 4);
 	scene.createSphere(vec3(5, -1, -15), vec3(0.9, 0.76, 0.46), 2);
 	scene.createSphere(vec3(5, 0, -25), vec3(0.65, 0.77, 0.97), 3);
 	scene.createSphere(vec3(-5.5, 0, -15), vec3(0.90, 0.90, 0.90), 3);
-
-	scene.createPlane(vec3(0, -3, 0), vec3(0, 0.7132, 1.0), vec3(0, 1, 0));
 
 	// Create triangle with vertices, normals then colour
 	scene.createTriangle(vec3(0, 3, -8), vec3(-1.9, 1, -8), vec3(1.6, 1.5, -8), 
@@ -134,11 +140,11 @@ void RayTracer::render() {
 		threads.push_back(std::thread(&RayTracer::renderModels, this, std::ref(scene), i * height / threadCount, (i + 1) * height / threadCount));
 	}
 
-	SDL_UpdateWindowSurface(window);
-
 	for(int i = 0; i < threadCount; i++) {
 		threads[i].join();
 	}
+
+	SDL_UpdateWindowSurface(window);
 
 	threads.clear();
 
@@ -329,6 +335,8 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 						if (traceShadows((*itLight), intersect, shadowData, models)) {
 							shadows.push_back(shadowData);
 						}
+						occluderBuffer[x][y] = shadowData.occluderDistance;
+						densityBuffer[x][y] = shadowData.density;
 						itLight++;
 					}
 				}
@@ -374,6 +382,7 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 				for (int i = 0; i < shadows.size(); i++) {
 					avgShadowGradient *= shadows[i].shadowGradient;
 				}
+
 				bool notHardShadow = avgShadowGradient > SHADOW_HARD;
 
 				float originToShadowT = length(shadows[whichone].intersectPoint - org);
@@ -392,7 +401,7 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 					if(notHardShadow) { accumulator *= avgShadowGradient; }
 				}
 				else {
-					accumulator = vec3(SHADOW_HARD);
+					accumulator = vec3(SHADOW_HARD + 0.1f);
 				}
 
 				image[x][y] = accumulator;
@@ -402,6 +411,10 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 			}
 		}
 	}
+
+	// After all the pixels in the current thread are processed
+	renderSoftShadows(scene, start, end, 32);
+
 }
 
 bool RayTracer::traceShadows(const Light* light, const IntersectData& originData, IntersectData& shadowData, const std::vector<Model*> models)
@@ -413,16 +426,63 @@ bool RayTracer::traceShadows(const Light* light, const IntersectData& originData
 		// If the shadow ray intersected with another object
 		if (models[i]->rayIntersect(intersectPtBias, shadowDir, shadowData)) {
 			shadowData.shadowGradient = SHADOW_HARD;
+			shadowData.occluderDistance = shadowData.t;
 			return true;
 		}
 	}
+
 	shadowData.shadowGradient = SHADOW_NONE;
+	shadowData.occluderDistance = 0.f;
 	return false;
+}
+
+void RayTracer::renderSoftShadows(Scene& scene, int start, int end, int samplingSize) {
+	float occluderDist;
+
+	for(int y = start; y < end; ++y) {
+		for(int x = 0; x < scene.getWidth(); ++x) {
+			occluderDist = occluderBuffer[x][y];
+			// Find closest
+			if(occluderDist == 0.f) {
+				occluderDist = searchCrossPattern(occluderBuffer, scene.getWidth(), scene.getHeight(), samplingSize);
+			}
+
+			// Calculate penumbra size
+			vec3 lightToPlane = scene.getModels()[0]->getCentre() - scene.mainLight->position;
+			float lightDistance = length(lightToPlane);
+
+			float prenumbraSize = (scene.mainLight->radius * occluderDist) / lightDistance;
+		}
+	}
+
+}
+
+float RayTracer::searchCrossPattern(float** buffer, int x, int y, int limitX, int limitY, int samplingSize) {
+	int x_max = std::min(x + samplingSize, limitX);
+	int x_min = std::max(0, x - samplingSize);
+	int y_max = std::min(y + samplingSize, limitY);
+	int y_min = std::min(0, y - samplingSize);
+
+	float highestVal = 0.f;
+
+	for(int i = x_min; i < x_max; i++) {
+		highestVal = buffer[i][x] > highestVal ? buffer[i][x] : highestVal;
+	}
+
+	for(int j = y_min; j < y_max; j++) {
+		highestVal = buffer[y][j] > highestVal ? buffer[y][j] : highestVal;
+	}
+
+	return highestVal;
 }
 
 void RayTracer::shutDown() {
 	scene.deleteAllObjects();
 	scene.deleteResources();
+
+	delete(occluderBuffer);
+	delete(densityBuffer);
+
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 }

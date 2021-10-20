@@ -24,6 +24,8 @@ struct IntersectData {
 
 	// directly multiplied with colour value so 1 = full colour and 0 = no_colour
 	float shadowGradient;
+	float occluderDistance;
+	float density; // 1 = not reflective and 0 is a window
 };
 
 class Model {
@@ -32,7 +34,8 @@ protected:
 
 public:
 	vec3 mycolour;
-	float shininess = 0;
+	float shininess = 0.f;
+	float density = 1.f;
 
 	virtual bool rayIntersect(vec3 rayOrigin, vec3 rayDirection, IntersectData& data) = 0;
 	virtual void computeColour(Light* light, const vec3 viewDir, const IntersectData data, vec3& result) const;
