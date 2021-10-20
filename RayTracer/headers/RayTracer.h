@@ -12,12 +12,13 @@ using namespace glm;
 class RayTracer {
 	SDL_Window* window = nullptr;
 	SDL_Surface* surface = nullptr;
+	SDL_PixelFormat* pixelFormat = nullptr;
 
-	// update rate of 60hz
-	const nanoSeconds NS_PER_TICK = nanoSeconds(16667us);
+	// update rate of 30hz
+	const nanoSeconds NS_PER_TICK = nanoSeconds(33333us);
 	long targetFps = 8000;
 	volatile bool running = false;
-	const int threadCount = 32;
+	const int threadCount = 8;
 	std::vector<std::thread> threads;
 
 	// Temporary objects
@@ -38,7 +39,7 @@ public:
 
 	void handleInputs();
 	void update();
-	void render(double dt);
+	void render();
 
 	void mainLoop();
 
@@ -56,6 +57,8 @@ public:
 	int caclulateFpsLows();
 
 	void renderModels(Scene &scene, int start, int end);
+	bool traceShadows(const Light* light, const IntersectData& originData, IntersectData& shadowData, const std::vector<Model*> models);
+	void traceReflections();
 
 	void shutDown();
 };

@@ -15,7 +15,7 @@ float Sphere::getRadius(void) {
 	return radius;
 }
 
-bool Sphere::rayIntersect(vec3 rayOrigin, vec3 rayDirection, float& t) {
+bool Sphere::rayIntersect(vec3 rayOrigin, vec3 rayDirection, IntersectData& data) {
 	float t0, t1; // solutions for t if the ray intersects where t0 is enter and t1 is exit (distances)
 
 	// geometric solution, assumes rayDirection is normalised
@@ -36,7 +36,11 @@ bool Sphere::rayIntersect(vec3 rayOrigin, vec3 rayDirection, float& t) {
 		if(t0 < 0) return false; // both t0 and t1 are negative 
 	}
 
-	t = t0;
+	data.t = t0;
+	data.intersect = true;
+	data.intersectPoint = rayOrigin + rayDirection * data.t;
+	data.normal = normalize(data.intersectPoint - centre);
+	data.model = (Model*)this;
 
 	return true;
 }

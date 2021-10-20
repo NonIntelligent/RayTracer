@@ -10,8 +10,6 @@ private:
 	vec3 vertexColours[3];
 
 public:
-	float u, v, w;
-
 	Triangle();
 	// Simple Triangle, normals need to be calculated
 	Triangle(vec3 v0, vec3 v1, vec3 v2, vec3 colour);
@@ -21,11 +19,10 @@ public:
 
 	~Triangle();
 
-	bool rayIntersect(vec3 rayOrigin, vec3 rayDirection, float& t) override;
+	bool rayIntersectOLD(vec3 rayOrigin, vec3 rayDirection, IntersectData& data);
+	bool rayIntersect(vec3 rayOrigin, vec3 rayDirection, IntersectData& data) override;
 
-	void computeColour(Light* light, const vec3 viewDir, const vec3 intersectPt, vec3& result) const override;
-
-	void getSurfaceData(vec3 rayOrigin, vec3 rayDirection, float t, vec3& intersectPt, vec3& normVec) const override;
+	void computeColour(Light* light, const vec3 viewDir, const IntersectData data, vec3& result) const override;
 
 	vec3 findAndSetCentre();
 };

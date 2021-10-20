@@ -59,12 +59,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IntDir>$(SolutionDir)$(Configuration)\$(Platform)\intermediates</IntDir>
+    <IntDir>$(SolutionDir)$(Configuration)\$(Platform)\intermediates\</IntDir>
     <OutDir>$(SolutionDir)$(Configuration)\$(Platform)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IntDir>$(SolutionDir)$(Configuration)\$(Platform)\intermediates</IntDir>
+    <IntDir>$(SolutionDir)$(Configuration)\$(Platform)\intermediates\</IntDir>
     <OutDir>$(SolutionDir)$(Configuration)\$(Platform)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseWithDebug|x64'">
@@ -143,7 +143,6 @@
   <ItemGroup>
     <ClCompile Include="src\Primatives\Plane.cpp" />
     <ClCompile Include="src\Primatives\Light.cpp" />
-    <ClCompile Include="src\Renderer.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Primatives\Model.cpp" />
     <ClCompile Include="src\Primatives\Sphere.cpp" />
@@ -163,7 +162,6 @@
     <ClInclude Include="headers\Scene\Scene.h" />
     <ClInclude Include="headers\Primatives\Sphere.h" />
     <ClInclude Include="headers\Primatives\Triangle.h" />
-    <ClInclude Include="headers\vendor\OBJloader.h" />
     <ClInclude Include="headers\vendor\OBJ_Loader.h" />
     <ClInclude Include="headers\Vertex.h" />
     <ClInclude Include="headers\Renderer.h" />

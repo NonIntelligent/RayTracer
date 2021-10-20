@@ -9,7 +9,7 @@ public:
 	Plane(vec3 position, vec3 colour, vec3 normal);
 	~Plane() { };
 
-	bool rayIntersect(vec3 rayOrigin, vec3 rayDirection, float& t) override;
+	bool rayIntersect(vec3 rayOrigin, vec3 rayDirection, IntersectData& data) override;
 
 };
 

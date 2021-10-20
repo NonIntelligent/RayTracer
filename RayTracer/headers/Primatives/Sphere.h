@@ -12,6 +12,6 @@ public:
 	~Sphere();
 	float getRadius(void);
 
-	bool rayIntersect(vec3 rayOrigin, vec3 rayDirection, float& t) override;
+	bool rayIntersect(vec3 rayOrigin, vec3 rayDirection, IntersectData& data) override;
 
 };

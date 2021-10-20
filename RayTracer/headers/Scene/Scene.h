@@ -5,14 +5,15 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <string>
+#include <algorithm>
 
 class Scene {
 	std::vector<Model*> models;
 	std::vector<Light*> lights;
 	std::vector<std::string> objectFilePaths;
 
-	int width = 640;
-	int height = 480;
+	int width = 1280;
+	int height = 720;
 
 	// Image containing all of the pixels colours on screen 
 	vec3** image = nullptr;
@@ -21,6 +22,8 @@ class Scene {
 	void createRenderImage();
 
 public:
+	Light* mainLight = nullptr;
+
 	Scene();
 	~Scene();
 

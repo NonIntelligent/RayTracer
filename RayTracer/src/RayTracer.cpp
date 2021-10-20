@@ -21,6 +21,7 @@ bool RayTracer::initSDL() {
 		}
 		else {
 			surface = SDL_GetWindowSurface(window);
+			pixelFormat = surface->format;
 			return true;
 		}
 	}
@@ -46,9 +47,9 @@ bool RayTracer::init() {
 	// Create triangle with vertices, normals then colour
 	scene.createTriangle(vec3(0, 3, -8), vec3(-1.9, 1, -8), vec3(1.6, 1.5, -8), 
 						vec3(0, 0.6, 1.0), vec3(-0.4, -0.4, 1.0), vec3(0.4, -0.4, 1), 
-						vec3(0.5, 0.5, 0.0), 100);
+						vec3(0.5, 0.5, 0.0), 32);
 
-	scene.createMesh(vec3(-2, -1, -13), vec3(1), vec3(0.5, 0.5, 0), 64, "resources/cube_simple.obj");
+	scene.createMesh(vec3(0, -1, -10), vec3(1), vec3(0.5, 0.5, 0), 32, "resources/cube_simple.obj");
 
 	//scene.createMesh(vec3(0, -1, -8), vec3(1), vec3(0.5, 0.5, 0), 100, "resources/teapot_simple.obj");
 
@@ -57,6 +58,7 @@ bool RayTracer::init() {
 
 // used for camera movement
 vec3 movementDir = vec3(0);
+vec3 lightMovementDir = vec3(0);
 float deltaX = 0, deltaY = 0;
 
 void RayTracer::handleInputs() {
@@ -71,6 +73,10 @@ void RayTracer::handleInputs() {
 			movementDir.x = keyCode == SDLK_a ? -1 : keyCode == SDLK_d ? 1 : movementDir.x;
 			movementDir.y = keyCode == SDLK_LCTRL ? -1 : keyCode == SDLK_SPACE ? 1 : movementDir.y;
 			movementDir.z = keyCode == SDLK_w ? -1 : keyCode == SDLK_s ? 1 : movementDir.z;
+
+			lightMovementDir.x = keyCode == SDLK_LEFT ? -1 : keyCode == SDLK_RIGHT ? 1 : lightMovementDir.x;
+			lightMovementDir.y = keyCode == SDLK_DOWN ? -1 : keyCode == SDLK_UP ? 1 : lightMovementDir.y;
+			lightMovementDir.z = keyCode == SDLK_COMMA ? -1 : keyCode == SDLK_PERIOD ? 1 : lightMovementDir.z;
 			break;
 
 		case SDL_KEYUP:
@@ -89,6 +95,16 @@ void RayTracer::handleInputs() {
 			}
 			if(keyCode == SDLK_w || keyCode == SDLK_s) {
 				movementDir.z = 0;
+			}
+
+			if(keyCode == SDLK_LEFT || keyCode == SDLK_RIGHT) {
+				lightMovementDir.x = 0;
+			}
+			if(keyCode == SDLK_DOWN || keyCode == SDLK_UP) {
+				lightMovementDir.y = 0;
+			}
+			if(keyCode == SDLK_COMMA || keyCode == SDLK_PERIOD) {
+				lightMovementDir.z = 0;
 			}
 			break;
 
@@ -111,7 +127,7 @@ void RayTracer::update() {
 	updateCameraPosition(deltaX, deltaY);
 }
 
-void RayTracer::render(double dt) {
+void RayTracer::render() {
 	const int height = scene.getHeight();
 	const int width = scene.getWidth();
 	for(int i = 0; i < threadCount; i++) {
@@ -170,7 +186,7 @@ void RayTracer::mainLoop() {
 		// Render once per loop at a set cap.
 		// NOTE Turning on v-sync will also limit the amount of times this if statement is called
 		if(currentTimeInNano - frameTimer >= nsPerRenderLimit) {
-			render(physicsTimer / nsPerRenderLimit); // Render in between physics updates
+			render(); // Render in between physics updates
 			frames++;
 			frameTimer += nsPerRenderLimit;
 		}
@@ -190,9 +206,13 @@ void RayTracer::mainLoop() {
 }
 
 void RayTracer::updateCameraPosition(float deltaX, float deltaY) {
-	cameraPos.x += movementDir.x * cameraSpeed * 0.0167f;
-	cameraPos.y += movementDir.y * cameraSpeed * 0.0167f;
-	cameraPos.z += movementDir.z * cameraSpeed * 0.0167f;
+	cameraPos.x += movementDir.x * cameraSpeed * 0.0333f;
+	cameraPos.y += movementDir.y * cameraSpeed * 0.0333f;
+	cameraPos.z += movementDir.z * cameraSpeed * 0.0333f;
+
+	scene.mainLight->position.x += lightMovementDir.x * cameraSpeed * 0.0333f;
+	scene.mainLight->position.y += lightMovementDir.y * cameraSpeed * 0.0333f;
+	scene.mainLight->position.z += lightMovementDir.z * cameraSpeed * 0.0333f;
 }
 
 glm::vec3 RayTracer::constructRayDir(Scene& scene, int x, int y) {
@@ -237,10 +257,9 @@ Uint32 RayTracer::convertColour(vec3 colour) {
 	b = tt <= 255 ? tt : 255;
 
 	// Combine data into one 32-byte type
-	Uint32 rgb;
-
-	//check which order SDL is storing bytes
-	rgb = (r << 16) + (g << 8) + b;
+	// NOTE my display has a BGR sub pixel layout and so
+	// triangles don't look the same on other monitors
+	uint32 rgb = SDL_MapRGB(pixelFormat, r, g, b);
 
 	return rgb;
 }
@@ -267,48 +286,58 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 	const int width = scene.getWidth();
 	const int height = scene.getHeight();
 
-	bool Intersection;
-	float t, min_t, u = 2.f, v = 2.f, ColorVal;
+	float t, min_t, max_t, u = 2.f, v = 2.f, ColorVal;
 
 	// Used for iteration and array access to improve performance
-	int i, whichone;
+	int i, whichone, furthestModel;
 
 	vec3 dir, org, mat_color, final_Color, IntPt;
+
 	// Initialise with set size to avoid resizing (Only effective when there are multiple objects in scene)
 	const int RESERVE_SIZE = 8;
 
-	std::vector<float> t_arr(RESERVE_SIZE);
+	std::vector<IntersectData> intersections(RESERVE_SIZE);
 	std::vector<Model*> inView(RESERVE_SIZE);
+	std::vector<IntersectData> shadows(RESERVE_SIZE);
 
 	// TODO swap order to optimise array memory access
 	for(int y = start; y < end; ++y) {
 		for(int x = 0; x < width; ++x) {
-			t_arr.clear();
+			intersections.clear();
 			inView.clear();
+			shadows.clear();
 
 			dir = constructRayDir(scene, x, y);
 
 			org = cameraPos;
 
-			vec3 intersectPt, normalVec;
-			vec3 lightNorm;
-
 			auto it = models.begin();
+			auto itLight = lights.begin();
 
 			while(it != models.end()) {
 				Model* ptr = *it;
+				IntersectData intersect;
 
 				// If the camera intersects with the model
-				if(ptr->rayIntersect(org, dir, t)) {
-					t_arr.push_back(t);
+				if(ptr->rayIntersect(org, dir, intersect)) {
+					intersections.push_back(intersect);
 					inView.push_back(ptr);
+					// Ray-trace shadows
+					// Iterate over each light
+					while (itLight != lights.end()) {
+						IntersectData shadowData;
+						if (traceShadows((*itLight), intersect, shadowData, models)) {
+							shadows.push_back(shadowData);
+						}
+						itLight++;
+					}
 				}
 
 				it++;
 			}
 
 			// Nothing on screen so render a blank image
-			if(t_arr.size() == 0) {
+			if(intersections.size() == 0) {
 				image[x][y].x = 1.0;
 				image[x][y].y = 1.0;
 				image[x][y].z = 1.0;
@@ -316,27 +345,54 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 				putPixel32_nolock(x, y, convertColour(image[x][y]));
 			}
 			else {
-				min_t = 1000.0;
+				min_t = 1000.f;
+				max_t = 0.f;
 				whichone = 0;
+				furthestModel = 0;
 				// Find the model closest to the Ray origin (Camera origin)
-				for(i = 0; i < t_arr.size(); i++) {
-					if(t_arr[i] < min_t) {
-						whichone = i; min_t = t_arr[i];
+				// TODO replace data at front of array instead of pushing on first rayIntersect
+				for(i = 0; i < intersections.size(); i++) {
+					if(intersections[i].t < min_t) {
+						whichone = i;
+						min_t = intersections[i].t;
+					}
+					if(intersections[i].t > max_t) {
+						furthestModel = i;
+						max_t = intersections[i].t;
 					}
 				}
 
-				// Get the intersection point and surface normal of the model
-				inView[whichone]->getSurfaceData(org, dir, t_arr[whichone], intersectPt, normalVec);
-
 				// Compute the colour at the pixel caused by all light objects
 				vec3 pixelColour;
-				vec3 accumulator(0);
+				vec3 accumulator(0.f);
+				float avgShadowGradient = 1.f;
 				auto it = lights.begin();
 
-				while(it != lights.end()) {
-					inView[whichone]->computeColour(*it, dir, intersectPt, pixelColour);
-					accumulator += pixelColour;
-					it++;
+				// CASE1: all shadows are hard therefore no need to compute colour
+				// CASE2: There are no shadows meaning all colour can be calculated
+				// This loop mixes all of the gradients together
+				for (int i = 0; i < shadows.size(); i++) {
+					avgShadowGradient *= shadows[i].shadowGradient;
+				}
+				bool notHardShadow = avgShadowGradient > SHADOW_HARD;
+
+				float originToShadowT = length(shadows[whichone].intersectPoint - org);
+				bool closest = intersections[whichone].t < intersections[furthestModel].t;
+				closest = intersections[whichone].t < originToShadowT;
+				//closest = intersections.size() > 1;
+
+				// There is no hard shadow on this pixel
+				if (notHardShadow || closest) {
+					// Only compute colour for the closest model in our view
+					while(it != lights.end()) {
+						inView[whichone]->computeColour(*it, dir, intersections[whichone], pixelColour);
+						accumulator += pixelColour;
+						it++;
+					}
+					if(notHardShadow) { accumulator *= avgShadowGradient; }
+				}
+				else {
+					accumulator = vec3(SHADOW_HARD);
 				}
 
 				image[x][y] = accumulator;
@@ -346,6 +402,22 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 			}
 		}
 	}
+}
+
+bool RayTracer::traceShadows(const Light* light, const IntersectData& originData, IntersectData& shadowData, const std::vector<Model*> models)
+{
+	vec3 shadowDir = normalize(light->position - originData.intersectPoint);
+	vec3 intersectPtBias = originData.intersectPoint + originData.normal * SHADOW_BIAS;
+
+	for (int i = 0; i < models.size(); i++) {
+		// If the shadow ray intersected with another object
+		if (models[i]->rayIntersect(intersectPtBias, shadowDir, shadowData)) {
+			shadowData.shadowGradient = SHADOW_HARD;
+			return true;
+		}
+	}
+	shadowData.shadowGradient = SHADOW_NONE;
+	return false;
 }
 
 void RayTracer::shutDown() {

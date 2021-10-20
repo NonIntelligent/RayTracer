@@ -2,14 +2,14 @@
 
 Light::Light(LightType type) : lightType(type){
 	if(type == LightType::DIRECTIONAL) {
-		ambientStrength = vec3(0.1);
+		ambientStrength = vec3(0.2);
 		diffuseStrength = vec3(0.5);
 		specularStrength = vec3(0.7);
 	}
 	else {
-		ambientStrength = vec3(0.05);
-		diffuseStrength = vec3(0.8);
-		specularStrength = vec3(1);
+		ambientStrength = vec3(0.0);
+		diffuseStrength = vec3(0.5);
+		specularStrength = vec3(0.7);
 
 		// Intensity will reach 1% at ~36 units
 		constant = 1.f;

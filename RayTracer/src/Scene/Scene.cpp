@@ -20,7 +20,8 @@ Scene::~Scene() {
 }
 
 void Scene::setupLights() {
-	createLight(vec3(5.0, 8.0, 1.0), vec3(1), vec3(-0.3, -0.3, -1.0), LightType::DIRECTIONAL);
+	createLight(vec3(5.0, 4.0, -5.0), vec3(1), vec3(-0.3, -0.3, -1.0), LightType::DIRECTIONAL);
+	mainLight = lights[0];
 }
 
 void Scene::createRenderImage() {
