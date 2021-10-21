@@ -36,6 +36,7 @@ bool Sphere::rayIntersect(vec3 rayOrigin, vec3 rayDirection, IntersectData& data
 		if(t0 < 0) return false; // both t0 and t1 are negative 
 	}
 
+	data.rayorigin = rayOrigin;
 	data.t = t0;
 	data.intersect = true;
 	data.intersectPoint = rayOrigin + rayDirection * data.t;

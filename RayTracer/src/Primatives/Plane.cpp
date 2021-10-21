@@ -16,6 +16,7 @@ bool Plane::rayIntersect(vec3 rayOrigin, vec3 rayDirection, IntersectData& data)
 	if(abs(denominator) > epsilon) {
 		vec3 rayToPlane = centre - rayOrigin;
 
+		data.rayorigin = rayOrigin;
 		data.t = dot(rayToPlane, planeNormal) / denominator;
 		data.intersect = data.t >= epsilon;
 		data.intersectPoint = rayOrigin + rayDirection * data.t;

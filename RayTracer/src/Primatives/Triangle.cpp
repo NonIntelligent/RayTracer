@@ -63,6 +63,7 @@ bool Triangle::rayIntersect(vec3 rayOrigin, vec3 rayDirection, IntersectData& da
 
 	float w = 1 - u - v;
 
+	data.rayorigin = rayOrigin;
 	data.t = dot(v0v2, qvec) * invDet;
 	data.intersect = data.t > epsilon;
 	//data.intersectPoint = u * vertex0 + v * vertex1 + w * vertex2;

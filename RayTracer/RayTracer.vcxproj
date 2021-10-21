@@ -141,6 +141,7 @@
     <ProjectReference />
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="headers\vendor\Algorithms.cpp" />
     <ClCompile Include="src\Primatives\Plane.cpp" />
     <ClCompile Include="src\Primatives\Light.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -162,6 +163,7 @@
     <ClInclude Include="headers\Scene\Scene.h" />
     <ClInclude Include="headers\Primatives\Sphere.h" />
     <ClInclude Include="headers\Primatives\Triangle.h" />
+    <ClInclude Include="headers\vendor\Algorithms.h" />
     <ClInclude Include="headers\vendor\OBJ_Loader.h" />
     <ClInclude Include="headers\Vertex.h" />
     <ClInclude Include="headers\Renderer.h" />

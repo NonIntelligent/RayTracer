@@ -1,5 +1,6 @@
 #include "RayTracer.h"
 #include "Primatives/Triangle.h"
+#include "vendor/Algorithms.h"
 #include <algorithm>
 #include <fstream>
 #include <math.h>
@@ -28,7 +29,7 @@ bool RayTracer::initSDL() {
 }
 
 RayTracer::RayTracer() {
-	cameraPos = vec3(0.f, 0.f, 0.f);
+	cameraPos = vec3(2.f, 0.f, 0.f);
 	lookAtDir = vec3(0.f, 0.f, -1.f);
 	g_fov = 40.f;
 	threads.reserve(threadCount);
@@ -43,12 +44,14 @@ bool RayTracer::init() {
 	densityBuffer = new float* [scene.getWidth()];
 	for(int i = 0; i < scene.getWidth(); i++) densityBuffer[i] = new float[scene.getHeight()];
 
-	scene.createPlane(vec3(0, -3, 0), vec3(0, 0.7132, 1.0), vec3(0, 1, 0));
+	// NOTE moving the order of creation messes up shadows 
 
 	scene.createSphere(vec3(0, 0, -20), vec3(1.00, 0.32, 0.36), 4);
 	scene.createSphere(vec3(5, -1, -15), vec3(0.9, 0.76, 0.46), 2);
 	scene.createSphere(vec3(5, 0, -25), vec3(0.65, 0.77, 0.97), 3);
 	scene.createSphere(vec3(-5.5, 0, -15), vec3(0.90, 0.90, 0.90), 3);
+
+	scene.createPlane(vec3(0, -3, 0), vec3(0, 0.7132, 1.0), vec3(0, 1, 0));
 
 	// Create triangle with vertices, normals then colour
 	scene.createTriangle(vec3(0, 3, -8), vec3(-1.9, 1, -8), vec3(1.6, 1.5, -8), 
@@ -66,6 +69,7 @@ bool RayTracer::init() {
 vec3 movementDir = vec3(0);
 vec3 lightMovementDir = vec3(0);
 float deltaX = 0, deltaY = 0;
+bool stats = false;
 
 void RayTracer::handleInputs() {
 	SDL_Event SDLevent;
@@ -83,6 +87,9 @@ void RayTracer::handleInputs() {
 			lightMovementDir.x = keyCode == SDLK_LEFT ? -1 : keyCode == SDLK_RIGHT ? 1 : lightMovementDir.x;
 			lightMovementDir.y = keyCode == SDLK_DOWN ? -1 : keyCode == SDLK_UP ? 1 : lightMovementDir.y;
 			lightMovementDir.z = keyCode == SDLK_COMMA ? -1 : keyCode == SDLK_PERIOD ? 1 : lightMovementDir.z;
+
+			if(keyCode == SDLK_F3) stats = !stats;
+
 			break;
 
 		case SDL_KEYUP:
@@ -144,6 +151,8 @@ void RayTracer::render() {
 		threads[i].join();
 	}
 
+	//renderSoftShadows(scene, 0, scene.getHeight());
+
 	SDL_UpdateWindowSurface(window);
 
 	threads.clear();
@@ -155,10 +164,10 @@ void RayTracer::mainLoop() {
 	running = true;
 	std::chrono::nanoseconds nsPerRenderLimit(1000000000L / targetFps); // todo check targetFps != 0
 
-	int tps = 0;
-	int fps = 0;
-	int ticks = 0;
-	int frames = 0;
+	int tps = 0, fps = 0, ticks = 0, frames = 0;
+
+	float averageTimeToRenderFrame = 0.f;
+
 
 	auto previousTime = high_res_clock::now(), currentTime = high_res_clock::now();
 
@@ -192,7 +201,12 @@ void RayTracer::mainLoop() {
 		// Render once per loop at a set cap.
 		// NOTE Turning on v-sync will also limit the amount of times this if statement is called
 		if(currentTimeInNano - frameTimer >= nsPerRenderLimit) {
+			uint64 start = SDL_GetPerformanceCounter();
 			render(); // Render in between physics updates
+			uint64 end = SDL_GetPerformanceCounter();
+
+			averageTimeToRenderFrame += (end - start) / (float)SDL_GetPerformanceFrequency();
+
 			frames++;
 			frameTimer += nsPerRenderLimit;
 		}
@@ -203,9 +217,19 @@ void RayTracer::mainLoop() {
 			fps = frames;
 
 			std::cout << "tps: " << tps << " fps: " << fps << std::endl;
+			std::cout << "time to render = " << (averageTimeToRenderFrame * 1000) / frames << "ms" << std::endl;
+			std::cout << "Total rays cast: " << raysCast << std::endl;
+			std::cout << "ray-primitive functions: " << intersectFunctionsCalled << std::endl;
+			std::cout << "ray-primitive hits: " << intersectHits << std::endl;
+
+			if(stats) renderStats();
 
 			ticks = 0;
 			frames = 0;
+			averageTimeToRenderFrame = 0.f;
+			raysCast = 0;
+			intersectFunctionsCalled = 0;
+			intersectHits = 0;
 			timer += singleSecond;
 		}
 	}
@@ -312,6 +336,7 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 			intersections.clear();
 			inView.clear();
 			shadows.clear();
+			occluderBuffer[x][y] = 1.f;
 
 			dir = constructRayDir(scene, x, y);
 
@@ -337,10 +362,14 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 						}
 						occluderBuffer[x][y] = shadowData.occluderDistance;
 						densityBuffer[x][y] = shadowData.density;
+						raysCast++;
 						itLight++;
 					}
-				}
 
+					intersectHits++;
+				}
+				raysCast++;
+				intersectFunctionsCalled++;
 				it++;
 			}
 
@@ -374,6 +403,7 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 				vec3 pixelColour;
 				vec3 accumulator(0.f);
 				float avgShadowGradient = 1.f;
+				bool renderShadow = true;
 				auto it = lights.begin();
 
 				// CASE1: all shadows are hard therefore no need to compute colour
@@ -384,11 +414,9 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 				}
 
 				bool notHardShadow = avgShadowGradient > SHADOW_HARD;
-
-				float originToShadowT = length(shadows[whichone].intersectPoint - org);
+				float originToShadowT = length(shadows[0].intersectPoint - org);
 				bool closest = intersections[whichone].t < intersections[furthestModel].t;
 				closest = intersections[whichone].t < originToShadowT;
-				//closest = intersections.size() > 1;
 
 				// There is no hard shadow on this pixel
 				if (notHardShadow || closest) {
@@ -398,7 +426,6 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 						accumulator += pixelColour;
 						it++;
 					}
-					if(notHardShadow) { accumulator *= avgShadowGradient; }
 				}
 				else {
 					accumulator = vec3(SHADOW_HARD + 0.1f);
@@ -412,40 +439,48 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 		}
 	}
 
-	// After all the pixels in the current thread are processed
-	renderSoftShadows(scene, start, end, 32);
-
 }
 
 bool RayTracer::traceShadows(const Light* light, const IntersectData& originData, IntersectData& shadowData, const std::vector<Model*> models)
 {
 	vec3 shadowDir = normalize(light->position - originData.intersectPoint);
 	vec3 intersectPtBias = originData.intersectPoint + originData.normal * SHADOW_BIAS;
+	float lightOcclusion = length(intersectPtBias - light->position);
 
 	for (int i = 0; i < models.size(); i++) {
 		// If the shadow ray intersected with another object
 		if (models[i]->rayIntersect(intersectPtBias, shadowDir, shadowData)) {
 			shadowData.shadowGradient = SHADOW_HARD;
-			shadowData.occluderDistance = shadowData.t;
+			shadowData.occluderDistance = shadowData.t / lightOcclusion;
 			return true;
 		}
 	}
 
+	// No occlusion
 	shadowData.shadowGradient = SHADOW_NONE;
-	shadowData.occluderDistance = 0.f;
+	shadowData.occluderDistance = 1.f;
 	return false;
 }
 
-void RayTracer::renderSoftShadows(Scene& scene, int start, int end, int samplingSize) {
+void RayTracer::renderSoftShadows(Scene& scene, int start, int end) {
 	float occluderDist;
 
 	for(int y = start; y < end; ++y) {
 		for(int x = 0; x < scene.getWidth(); ++x) {
 			occluderDist = occluderBuffer[x][y];
 			// Find closest
-			if(occluderDist == 0.f) {
-				occluderDist = searchCrossPattern(occluderBuffer, scene.getWidth(), scene.getHeight(), samplingSize);
+			if(occluderDist == 1.f) {
+				occluderDist = searchCrossPattern(occluderBuffer, x, y, scene.getWidth(), scene.getHeight());
+				occluderBuffer[x][y] = std::min(occluderDist / 0.01f, 1.f);
 			}
+			else {
+				occluderDist = occluderDist;
+			}
+
+			uint32 colour = convertColour(scene.getPixels()[x][y] *= occluderBuffer[x][y]);
+			
+			putPixel32_nolock(x, y, colour);
+
 
 			// Calculate penumbra size
 			vec3 lightToPlane = scene.getModels()[0]->getCentre() - scene.mainLight->position;
@@ -457,11 +492,39 @@ void RayTracer::renderSoftShadows(Scene& scene, int start, int end, int sampling
 
 }
 
-float RayTracer::searchCrossPattern(float** buffer, int x, int y, int limitX, int limitY, int samplingSize) {
-	int x_max = std::min(x + samplingSize, limitX);
-	int x_min = std::max(0, x - samplingSize);
-	int y_max = std::min(y + samplingSize, limitY);
-	int y_min = std::min(0, y - samplingSize);
+void RayTracer::renderStats() {
+	//this opens a font style and sets a size
+	//TTF_Font* Sans = TTF_OpenFont("Sans.ttf", 24);
+
+	// this is the color in rgb format,
+	// maxing out all would give you the color white,
+	// and it will be your text's color
+	//SDL_Color White = {255, 255, 255};
+
+	// as TTF_RenderText_Solid could only be used on
+	// SDL_Surface then you have to create the surface first
+	//SDL_Surface* surfaceMessage =
+		//TTF_RenderText_Solid(Sans, "put your text here", White);
+
+	// now you can convert it into a texture
+	//SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
+
+	//SDL_Rect Message_rect;
+	//Message_rect.x = 0;
+	//Message_rect.y = 0;
+	//Message_rect.w = 100;
+	//Message_rect.h = 100;
+
+	//SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
+}
+
+float RayTracer::searchCrossPattern(float** buffer, int x, int y, int limitX, int limitY) {
+	const int pixelSample = 16;
+	// Limit values of x and y so that the buffer doesn't overflow
+	int x_max = std::min(x + pixelSample, limitX);
+	int x_min = std::max(0, x - pixelSample);
+	int y_max = std::min(y + pixelSample, limitY);
+	int y_min = std::max(0, y - pixelSample);
 
 	float highestVal = 0.f;
 

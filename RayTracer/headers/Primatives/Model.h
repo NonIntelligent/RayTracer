@@ -13,6 +13,7 @@ class Model;
 using namespace glm;
 
 struct IntersectData {
+	vec3 rayorigin = vec3(0);
 	float t = 0;
 	bool intersect = false;
 	vec3 intersectPoint = vec3(0);

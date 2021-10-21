@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <SDL/SDL.h>
 #include <thread>
+#include <atomic>
 #include "macros/Macro_chrono.h"
 #include "macros/Definitions.h"
 #include "Primatives/Sphere.h"
@@ -11,6 +12,7 @@ using namespace glm;
 
 class RayTracer {
 	SDL_Window* window = nullptr;
+	SDL_Renderer* renderer = nullptr;
 	SDL_Surface* surface = nullptr;
 	SDL_PixelFormat* pixelFormat = nullptr;
 
@@ -18,8 +20,11 @@ class RayTracer {
 	const nanoSeconds NS_PER_TICK = nanoSeconds(33333us);
 	long targetFps = 8000;
 	volatile bool running = false;
-	const int threadCount = 8;
+	const int threadCount = 16;
 	std::vector<std::thread> threads;
+	std::atomic<int> raysCast = 0;
+	std::atomic<int> intersectFunctionsCalled = 0;
+	std::atomic<int> intersectHits = 0;
 
 	// Temporary objects
 	Scene scene;
@@ -62,11 +67,13 @@ public:
 
 	void renderModels(Scene &scene, int start, int end);
 	bool traceShadows(const Light* light, const IntersectData& originData, IntersectData& shadowData, const std::vector<Model*> models);
-	void renderSoftShadows(Scene& scene, int start, int end, int samplingSize);
+	void renderSoftShadows(Scene& scene, int start, int end);
 	
 	void traceReflections();
 
-	float searchCrossPattern(float** buffer, int x, int y, int limitX, int limitY, int samplingSize);
+	void renderStats();
+
+	float searchCrossPattern(float** buffer, int x, int y, int limitX, int limitY);
 
 	void shutDown();
 };
