@@ -13,20 +13,18 @@ class Model;
 using namespace glm;
 
 struct IntersectData {
-	vec3 rayorigin = vec3(0);
-	float t = 0;
-	bool intersect = false;
-	vec3 intersectPoint = vec3(0);
-	vec3 normal = vec3(0);
-	Model* model = nullptr;
+	vec3 rayorigin;
+	vec3 intersectPoint;
+	vec3 normal;
+	float t;
 
 	// only to be used by triangles
-	vec3 UVs = vec3(0);
+	vec3 UVs;
 
-	// directly multiplied with colour value so 1 = full colour and 0 = no_colour
 	float shadowGradient;
 	float occluderDistance;
 	float density; // 1 = not reflective and 0 is a window
+	Model* model = nullptr;
 };
 
 class Model {

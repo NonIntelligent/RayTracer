@@ -18,13 +18,12 @@ bool Plane::rayIntersect(vec3 rayOrigin, vec3 rayDirection, IntersectData& data)
 
 		data.rayorigin = rayOrigin;
 		data.t = dot(rayToPlane, planeNormal) / denominator;
-		data.intersect = data.t >= epsilon;
 		data.intersectPoint = rayOrigin + rayDirection * data.t;
 		//data.normal = normalize(data.intersectPoint - centre);
 		data.normal = planeNormal;
 		data.model = (Model*) this;
 
-		return data.intersect;
+		return data.t >= epsilon;
 	}
 
 	return false;

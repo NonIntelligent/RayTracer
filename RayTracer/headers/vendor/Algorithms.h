@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include "Primatives/Model.h"
 
 
 #define vectorString std::vector<std::string>
@@ -20,5 +21,6 @@ int partition(T* arr, int start, int end);
 // Tail-cull optimisation was used to reduce space complexity as we are iterating over 17000 words
 // Worst case space is now O(Log n) as opposed to O(n)
 void quickSort(int* arr, int start, int end);
-void quickSort(float* arr, float start, float end);
+void quickSort(float* arr, int start, int end);
+void quickSort(IntersectData* arr, int start, int end);
 

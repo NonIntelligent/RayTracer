@@ -8,6 +8,8 @@
 #include "Primatives/Sphere.h"
 #include "Scene/Scene.h"
 
+const int CORE_COUNT = std::thread::hardware_concurrency();
+
 using namespace glm;
 
 class RayTracer {
@@ -17,10 +19,12 @@ class RayTracer {
 	SDL_PixelFormat* pixelFormat = nullptr;
 
 	// update rate of 30hz
-	const nanoSeconds NS_PER_TICK = nanoSeconds(33333us);
+	const nanoSeconds NS_PER_TICK = nanoSeconds(32222us);
 	long targetFps = 8000;
 	volatile bool running = false;
-	const int threadCount = 16;
+	const int threadCount = CORE_COUNT == 0 ? 12 : CORE_COUNT;
+	float frameSamples[60];
+	int frameSampleIndex = 0;
 	std::vector<std::thread> threads;
 	std::atomic<int> raysCast = 0;
 	std::atomic<int> intersectFunctionsCalled = 0;

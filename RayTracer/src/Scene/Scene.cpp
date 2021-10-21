@@ -6,6 +6,7 @@
 
 #include <string>
 #include <fstream>
+#include <algorithm>
 
 vec3 convert(objl::Vector3 vector) {
 	return vec3(vector.X, vector.Y, vector.Z);
@@ -27,7 +28,9 @@ void Scene::setupLights() {
 void Scene::createRenderImage() {
 	//create two dimensional pixel array for the image
 	image = new vec3 * [width];
-	for(int i = 0; i < width; i++) image[i] = new vec3[height];
+	for(int i = 0; i < width; i++) {
+		image[i] = new vec3[height];
+	}
 }
 
 void Scene::init() {

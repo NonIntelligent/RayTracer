@@ -33,6 +33,8 @@ RayTracer::RayTracer() {
 	lookAtDir = vec3(0.f, 0.f, -1.f);
 	g_fov = 40.f;
 	threads.reserve(threadCount);
+
+	std::cout << "Size of Intersect Data " << sizeof(struct IntersectData) << " bytes" << std::endl;
 }
 
 bool RayTracer::init() {
@@ -144,16 +146,16 @@ void RayTracer::render() {
 	const int height = scene.getHeight();
 	const int width = scene.getWidth();
 	for(int i = 0; i < threadCount; i++) {
-		threads.push_back(std::thread(&RayTracer::renderModels, this, std::ref(scene), i * height / threadCount, (i + 1) * height / threadCount));
+		threads.push_back(std::thread(&RayTracer::renderModels, this, std::ref(scene), i * width / threadCount, (i + 1) * width / threadCount));
 	}
 
 	for(int i = 0; i < threadCount; i++) {
 		threads[i].join();
 	}
 
+	SDL_UpdateWindowSurface(window);
 	//renderSoftShadows(scene, 0, scene.getHeight());
 
-	SDL_UpdateWindowSurface(window);
 
 	threads.clear();
 
@@ -218,18 +220,39 @@ void RayTracer::mainLoop() {
 
 			std::cout << "tps: " << tps << " fps: " << fps << std::endl;
 			std::cout << "time to render = " << (averageTimeToRenderFrame * 1000) / frames << "ms" << std::endl;
+
+			if(frameSampleIndex == 60) {
+				float tenSecondAverage = 0.f;
+				for(int i = 0; i < 60; i++) {
+					tenSecondAverage += frameSamples[i];
+				}
+				tenSecondAverage /= 60;
+
+				std::cout << "average time to render last 60 seconds = " << (tenSecondAverage) / frames << "s" << std::endl;
+
+				frameSampleIndex = 0;
+			}
+
+			frameSamples[frameSampleIndex] = averageTimeToRenderFrame;
+			frameSampleIndex++;
+
+			#ifdef BENCHMARK
 			std::cout << "Total rays cast: " << raysCast << std::endl;
 			std::cout << "ray-primitive functions: " << intersectFunctionsCalled << std::endl;
 			std::cout << "ray-primitive hits: " << intersectHits << std::endl;
+			#endif // BENCHMARK
 
-			if(stats) renderStats();
 
 			ticks = 0;
 			frames = 0;
 			averageTimeToRenderFrame = 0.f;
+
+			#ifdef BENCHMARK
 			raysCast = 0;
 			intersectFunctionsCalled = 0;
 			intersectHits = 0;
+			#endif // BENCHMARK
+
 			timer += singleSecond;
 		}
 	}
@@ -316,12 +339,10 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 	const int width = scene.getWidth();
 	const int height = scene.getHeight();
 
-	float t, min_t, max_t, u = 2.f, v = 2.f, ColorVal;
-
 	// Used for iteration and array access to improve performance
-	int i, whichone, furthestModel;
+	int i, whichone = 0;
 
-	vec3 dir, org, mat_color, final_Color, IntPt;
+	vec3 dir, org;
 
 	// Initialise with set size to avoid resizing (Only effective when there are multiple objects in scene)
 	const int RESERVE_SIZE = 8;
@@ -331,8 +352,8 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 	std::vector<IntersectData> shadows(RESERVE_SIZE);
 
 	// TODO swap order to optimise array memory access
-	for(int y = start; y < end; ++y) {
-		for(int x = 0; x < width; ++x) {
+	for(int x = start; x < end; ++x) {
+		for(int y = 0; y < height; ++y) {
 			intersections.clear();
 			inView.clear();
 			shadows.clear();
@@ -342,35 +363,36 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 
 			org = cameraPos;
 
-			auto it = models.begin();
-			auto itLight = lights.begin();
-
-			while(it != models.end()) {
-				Model* ptr = *it;
+			for(i = 0; i < models.size(); i++) {
 				IntersectData intersect;
 
 				// If the camera intersects with the model
-				if(ptr->rayIntersect(org, dir, intersect)) {
+				if(models[i]->rayIntersect(org, dir, intersect)) {
 					intersections.push_back(intersect);
-					inView.push_back(ptr);
+					inView.push_back(models[i]);
 					// Ray-trace shadows
 					// Iterate over each light
-					while (itLight != lights.end()) {
+					for(int j = 0; j < lights.size(); j++) {
 						IntersectData shadowData;
-						if (traceShadows((*itLight), intersect, shadowData, models)) {
+						if(traceShadows(lights[j], intersect, shadowData, models)) {
 							shadows.push_back(shadowData);
 						}
 						occluderBuffer[x][y] = shadowData.occluderDistance;
 						densityBuffer[x][y] = shadowData.density;
+
+						#ifdef BENCHMARK
 						raysCast++;
-						itLight++;
+						#endif 
 					}
 
+					#ifdef BENCHMARK
 					intersectHits++;
+					#endif 
 				}
+				#ifdef BENCHMARK
 				raysCast++;
 				intersectFunctionsCalled++;
-				it++;
+				#endif 
 			}
 
 			// Nothing on screen so render a blank image
@@ -380,62 +402,54 @@ void RayTracer::renderModels(Scene &scene, int start, int end) {
 				image[x][y].z = 1.0;
 
 				putPixel32_nolock(x, y, convertColour(image[x][y]));
+				continue;
+			}
+
+			float min_t = 1000.f;
+			// Find the model closest to the Ray origin (Camera origin)
+			for(i = 0; i < intersections.size(); i++) {
+				if(intersections[i].t < min_t) {
+					whichone = i;
+					min_t = intersections[i].t;
+				}
+			}
+
+			// Compute the colour at the pixel caused by all light objects
+			vec3 pixelColour;
+			vec3 accumulator(0.f);
+			float avgShadowGradient = 1.f;
+			bool closest = true;
+
+			// CASE1: all shadows are hard therefore no need to compute colour
+			// CASE2: There are no shadows meaning all colour can be calculated
+			// This loop mixes all of the gradients together
+			for (i = 0; i < shadows.size(); i++) {
+				avgShadowGradient *= shadows[i].shadowGradient;
+			}
+
+			bool notHardShadow = avgShadowGradient > SHADOW_HARD;
+
+			float originToShadowT = length(shadows[0].intersectPoint - org);
+			closest = intersections[whichone].t < originToShadowT;
+
+			// There is no hard shadow on this pixel
+			if (notHardShadow || closest) {
+				int size = lights.size();
+				// Only compute colour for the closest model in our view
+				for(i = 0; i < size; i++) {
+					inView[whichone]->computeColour(lights[i], dir, intersections[whichone], pixelColour);
+					accumulator += pixelColour;
+				}
+
 			}
 			else {
-				min_t = 1000.f;
-				max_t = 0.f;
-				whichone = 0;
-				furthestModel = 0;
-				// Find the model closest to the Ray origin (Camera origin)
-				// TODO replace data at front of array instead of pushing on first rayIntersect
-				for(i = 0; i < intersections.size(); i++) {
-					if(intersections[i].t < min_t) {
-						whichone = i;
-						min_t = intersections[i].t;
-					}
-					if(intersections[i].t > max_t) {
-						furthestModel = i;
-						max_t = intersections[i].t;
-					}
-				}
-
-				// Compute the colour at the pixel caused by all light objects
-				vec3 pixelColour;
-				vec3 accumulator(0.f);
-				float avgShadowGradient = 1.f;
-				bool renderShadow = true;
-				auto it = lights.begin();
-
-				// CASE1: all shadows are hard therefore no need to compute colour
-				// CASE2: There are no shadows meaning all colour can be calculated
-				// This loop mixes all of the gradients together
-				for (int i = 0; i < shadows.size(); i++) {
-					avgShadowGradient *= shadows[i].shadowGradient;
-				}
-
-				bool notHardShadow = avgShadowGradient > SHADOW_HARD;
-				float originToShadowT = length(shadows[0].intersectPoint - org);
-				bool closest = intersections[whichone].t < intersections[furthestModel].t;
-				closest = intersections[whichone].t < originToShadowT;
-
-				// There is no hard shadow on this pixel
-				if (notHardShadow || closest) {
-					// Only compute colour for the closest model in our view
-					while(it != lights.end()) {
-						inView[whichone]->computeColour(*it, dir, intersections[whichone], pixelColour);
-						accumulator += pixelColour;
-						it++;
-					}
-				}
-				else {
-					accumulator = vec3(SHADOW_HARD + 0.1f);
-				}
-
-				image[x][y] = accumulator;
-
-				// Overflow the colours onto the image pixels
-				putPixel32_nolock(x, y, convertColour(image[x][y]));
+				accumulator = vec3(SHADOW_HARD + 0.1f);
 			}
+
+			image[x][y] = accumulator;
+
+			// Overflow the colours onto the image pixels
+			putPixel32_nolock(x, y, convertColour(image[x][y]));
 		}
 	}
 
@@ -465,8 +479,8 @@ bool RayTracer::traceShadows(const Light* light, const IntersectData& originData
 void RayTracer::renderSoftShadows(Scene& scene, int start, int end) {
 	float occluderDist;
 
-	for(int y = start; y < end; ++y) {
-		for(int x = 0; x < scene.getWidth(); ++x) {
+	for(int x = start; x < end; ++x) {
+		for(int y = 0; y < scene.getHeight(); ++y) {
 			occluderDist = occluderBuffer[x][y];
 			// Find closest
 			if(occluderDist == 1.f) {
@@ -490,6 +504,9 @@ void RayTracer::renderSoftShadows(Scene& scene, int start, int end) {
 		}
 	}
 
+}
+
+void RayTracer::traceReflections() {
 }
 
 void RayTracer::renderStats() {

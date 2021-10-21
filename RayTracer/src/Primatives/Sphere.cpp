@@ -38,7 +38,6 @@ bool Sphere::rayIntersect(vec3 rayOrigin, vec3 rayDirection, IntersectData& data
 
 	data.rayorigin = rayOrigin;
 	data.t = t0;
-	data.intersect = true;
 	data.intersectPoint = rayOrigin + rayDirection * data.t;
 	data.normal = normalize(data.intersectPoint - centre);
 	data.model = (Model*)this;

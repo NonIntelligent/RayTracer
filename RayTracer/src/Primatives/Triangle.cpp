@@ -65,7 +65,6 @@ bool Triangle::rayIntersect(vec3 rayOrigin, vec3 rayDirection, IntersectData& da
 
 	data.rayorigin = rayOrigin;
 	data.t = dot(v0v2, qvec) * invDet;
-	data.intersect = data.t > epsilon;
 	//data.intersectPoint = u * vertex0 + v * vertex1 + w * vertex2;
 	data.intersectPoint = rayOrigin + rayDirection * data.t;
 	data.normal = normalize(w * norm0 + u * norm1 + v * norm2);
@@ -75,7 +74,7 @@ bool Triangle::rayIntersect(vec3 rayOrigin, vec3 rayDirection, IntersectData& da
 	data.UVs.y = v;
 	data.UVs.z = w;
 
-	return data.intersect;
+	return data.t > epsilon;
 }
 
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/barycentric-coordinates
@@ -127,7 +126,6 @@ bool Triangle::rayIntersectOLD(vec3 rayOrigin, vec3 rayDirection, IntersectData&
 	w = 1 - u - v;
 
 	data.t = t;
-	data.intersect = true;
 	data.intersectPoint = p;
 	data.normal = normalize(w * norm0 + u * norm1 + v * norm2);
 	//data.normal = normal;
